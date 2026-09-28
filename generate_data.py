@@ -1,10 +1,13 @@
 import os
 import random
+from datetime import date
+from pathlib import Path
 import pandas as pd
 import numpy as np
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, URL
+from sqlalchemy import text
 from faker import Faker
 
 
@@ -17,6 +20,9 @@ fake = Faker()
 random.seed(42)
 np.random.seed(42)
 Faker.seed(42)
+
+# Freeze the observation window so reruns do not change the results over time.
+AS_OF_DATE = date(2026, 9, 27)
 
 load_dotenv()
 
@@ -57,8 +63,8 @@ for customer_id in range(1, num_customers + 1):
         "country": fake.country(),
         "city": fake.city(),
         "signup_date": fake.date_between(
-            start_date="-5y",
-            end_date="today"
+            start_date=date(2021, 9, 27),
+            end_date=AS_OF_DATE
         )
     })
 
@@ -127,8 +133,8 @@ for order_id in range(1, num_orders + 1):
         "order_id": order_id,
         "customer_id": customer_id,
         "order_date": fake.date_between(
-            start_date="-4y",
-            end_date="today"
+            start_date=date(2022, 9, 27),
+            end_date=AS_OF_DATE
         ),
         "order_status": random.choice(
             [
@@ -224,13 +230,23 @@ for col in ["first_name", "last_name", "country", "city"]:
 
     print(col, max_len, longest_value)
 
-with engine.begin() as conn:
-    order_items_df.to_sql(
-        "order_items",
-        conn,
-        if_exists="append",
-        index=False,
-        chunksize=500
-    )
+schema_path = Path(__file__).with_name("schema.sql")
+statements = [statement.strip() for statement in schema_path.read_text().split(";") if statement.strip()]
 
-print("Order items loaded successfully!")
+with engine.begin() as conn:
+    for statement in statements:
+        conn.execute(text(statement))
+
+    table_names = ["customers", "categories", "products", "orders", "order_items"]
+    if any(conn.execute(text(f"SELECT COUNT(*) FROM {name}")).scalar_one() for name in table_names):
+        raise RuntimeError("Database already contains data. Use an empty database for generation.")
+
+    for table_name, frame in [
+        ("customers", customers_df),
+        ("categories", categories_df),
+        ("products", products_df),
+        ("orders", orders_df),
+        ("order_items", order_items_df),
+    ]:
+        frame.to_sql(table_name, conn, if_exists="append", index=False, chunksize=500)
+        print(f"Loaded {len(frame):,} rows into {table_name}.")

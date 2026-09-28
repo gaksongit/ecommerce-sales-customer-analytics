@@ -1,148 +1,65 @@
 # E-commerce Sales & Customer Analytics
 
-An end-to-end analytics portfolio project using **PostgreSQL, SQL, Python, pandas, matplotlib, and scikit-learn**.
+A portfolio case study using **PostgreSQL, SQL, Python, pandas, and scikit-learn** to explore product profitability, purchasing patterns, customer segments, and a simple classification model. The data is **synthetic**; the findings demonstrate an analytical workflow rather than evidence about a real business.
 
-The project analyzes a synthetic e-commerce database and demonstrates the full analytics workflow: database design, SQL analysis, exploratory data analysis, customer segmentation, profitability analysis, visualization, and predictive modeling.
+## At a glance
 
-## Project Objectives
+| Measure | Result |
+| --- | ---: |
+| Orders | 20,000 |
+| Order lines | 59,791 |
+| Customers | 5,000 |
+| Sales value across all order statuses | 34,735,722.70 |
+| Gross profit across all order statuses | 11,106,636.81 |
+| Gross margin | 31.97% |
+| Average order value | 1,736.79 |
 
-The goal of the project was to answer practical business questions such as:
+**Metric scope:** The headline sales and profit calculations sum all order lines, including orders marked cancelled or returned. They should be read as transaction value in this synthetic dataset, not recognized revenue. The SQL scripts also examine order status separately.
 
-- How much revenue and gross profit is the business generating?
-- Which categories and products contribute most to revenue and profit?
-- Which products generate high revenue but low margins?
-- How do discounts affect profitability?
-- What is the customer value distribution?
-- Which customers are most valuable or at risk?
-- Can customer behavior be used to identify High Value customers?
+## Questions and findings
 
-## Dataset
+- Which categories and products drive sales and profit? Toys, Home & Kitchen, and Books lead sales value; Home & Kitchen has the highest gross profit.
+- How do discounts relate to margins? The observed gross margin declines from about 36.8% for items without discounts to about 21.1% at a 20% discount. This is a descriptive comparison, not a causal estimate.
+- How is customer value distributed? 191 customers (3.9% of customers with purchases) are classified as High Value under the project's spending based segmentation.
+- Which customers merit follow-up? RFM analysis distinguishes groups including Champions and At Risk customers.
+- Can behavior flag High Value customers? A logistic regression using recency and frequency achieved ROC-AUC 0.958, recall 0.85, precision 0.28, and F1 0.42 on a held out test split. This is a demonstration on synthetic data, not a production forecast. Spending was excluded from predictors because it defines the target.
 
-The PostgreSQL database contains five relational tables:
+## Repository guide
 
-- `customers` – 5,000 customers
-- `categories` – 8 product categories
-- `products` – 250 products
-- `orders` – 20,000 orders
-- `order_items` – 59,791 order lines
+| File | Purpose |
+| --- | --- |
+| [`schema.sql`](schema.sql) | PostgreSQL tables, primary keys, and relationships |
+| [`generate_data.py`](generate_data.py) | Seeded synthetic data generation and database loading |
+| [`01_basic_analysis.sql`](01_basic_analysis.sql) | Overall metrics, category sales, and customer basics |
+| [`02_customer_analysis.sql`](02_customer_analysis.sql) | Customer value and RFM segments |
+| [`03_sales_trends.sql`](03_sales_trends.sql) | Monthly trends, year over year change, and rolling averages |
+| [`04_product_analysis.sql`](04_product_analysis.sql) | Product revenue, profit, and discounts |
+| [`05_order_analysis.sql`](05_order_analysis.sql) | Order status, payment method, and order patterns |
+| [`ecommerce_analysis.ipynb`](ecommerce_analysis.ipynb) | Python exploration, visualizations, and classification |
+| [`requirements.txt`](requirements.txt) | Python package dependencies |
+| [`.env.example`](.env.example) | Example local database configuration without credentials |
 
-The dataset is synthetic and was generated in Python for portfolio purposes.
+## Reproduce the analysis
 
-## Tools Used
+Requires Python 3, PostgreSQL running locally on port 5432, and a local PostgreSQL user named `postgres` with permission to create tables.
 
-- PostgreSQL
-- pgAdmin
-- SQL
-- Python
-- pandas
-- NumPy
-- matplotlib
-- SQLAlchemy
-- scikit-learn
-- Jupyter Notebook
-- VS Code
+1. Clone this repository and install its Python packages:
 
-## SQL Analysis
+   ```bash
+   git clone https://github.com/gaksongit/ecommerce-sales-customer-analytics.git
+   cd ecommerce-sales-customer-analytics
+   python -m pip install -r requirements.txt
+   ```
 
-The SQL portion of the project includes:
+2. Create an **empty** PostgreSQL database named `ecommerce_analytics`. For example, use pgAdmin or run `CREATE DATABASE ecommerce_analytics;` while connected to another database.
+3. Copy `.env.example` to `.env` and replace the example value with your own local PostgreSQL password. `.env` is ignored by Git. Do not commit credentials.
+4. Run `python generate_data.py`. It creates the five related tables and loads synthetic records. It refuses to load into a database that already contains rows, to avoid duplicates.
+5. Open the SQL files in pgAdmin, or run the notebook with `jupyter notebook ecommerce_analysis.ipynb` after the database has been populated.
 
-- Revenue and Average Order Value
-- Gross profit and gross margin
-- Revenue and profitability by category
-- Top products and customers
-- Repeat customer analysis
-- Monthly revenue trends
-- Year-over-Year revenue and profit growth
-- 3-month rolling revenue averages
-- Product profitability analysis
-- High-revenue / low-margin product identification
-- Customer value segmentation
-- RFM segmentation
-- Order status analysis
-- Payment method analysis
-- Order-size distribution
-- Discount impact analysis
-- Realized vs lost/reversed revenue
+The generator uses a fixed random seed and a fixed observation end date (27 September 2026) so future runs remain comparable. The notebook shows saved outputs from the original analysis; rerun its cells against your freshly generated database to refresh them.
 
-Advanced SQL techniques used include:
+## Methods and limitations
 
-- JOINs
-- CTEs
-- CASE expressions
-- Aggregate functions
-- Subqueries
-- Window functions
-- `LAG()`
-- `ROW_NUMBER()`
-- `NTILE()`
-- Rolling windows
-- Conditional aggregation
+SQL queries use joins, CTEs, conditional aggregation, `LAG`, `ROW_NUMBER`, `NTILE`, and rolling windows. Python covers validation, feature engineering, customer aggregation, RFM segmentation, charts, and logistic regression.
 
-## Python Analysis
-
-Python was used for:
-
-- Loading PostgreSQL data directly into pandas
-- Data type validation
-- Missing-value checks
-- Duplicate detection
-- Descriptive statistics
-- Feature engineering
-- Revenue and profit calculations
-- Customer-level aggregation
-- RFM segmentation
-- Visualization
-- Predictive modeling
-
-## Key Business Insights
-
-- Total revenue was approximately **34.7M**, with gross profit of approximately **11.1M** and an overall gross margin of about **32%**.
-
-- **Toys, Home & Kitchen, and Books** generated the highest revenue, while **Home & Kitchen** generated the highest gross profit.
-
-- Product profitability varied significantly. Several products with high revenue had gross margins below **20%**, while others with similar revenue achieved margins above **40–50%**.
-
-- Gross margin decreased consistently as discounts increased, falling from approximately **36.8% at 0% discount** to approximately **21.1% at 20% discount**.
-
-- Most customers belonged to the Low or Medium Value segments. Only **191 customers (3.9%)** were classified as High Value.
-
-- RFM analysis identified valuable customer groups such as **Champions**, as well as **At Risk** customers who historically spent and purchased frequently but had not purchased recently.
-
-- Monthly revenue remained relatively stable throughout the observation period, with short-term fluctuations smoothed using a 3-month rolling average.
-
-## Predictive Modeling
-
-A logistic regression model was built to identify High Value customers using:
-
-- Recency
-- Purchase frequency
-
-`total_spent` was intentionally excluded from the predictors to avoid target leakage because High Value status was defined using customer spending.
-
-Model performance:
-
-- ROC-AUC: **0.958**
-- High Value recall: **0.85**
-- High Value precision: **0.28**
-- High Value F1-score: **0.42**
-
-The model successfully identified most High Value customers, although the low prevalence of High Value customers created a class-imbalance challenge.
-
-Purchase frequency was the strongest predictor of High Value customer status.
-
-## Project Structure
-
-```text
-ecommerce_sql_python/
-│
-├── README.md
-├── ecommerce_analysis.ipynb
-├── generate_data.py
-│
-├── 01_basic_analysis.sql
-├── 02_customer_analysis.sql
-├── 03_sales_trends.sql
-├── 04_product_analysis.sql
-├── 05_order_analysis.sql
-│
-└── .env
+The data generating process is synthetic, order statuses are randomly assigned, and the model's target is based on spending within this same dataset. Neither the relationships nor model performance should be generalized to real customers. No personal customer data is used; generated email addresses use `example.com`.
